@@ -208,4 +208,50 @@ private
   def debug(str)
     $stderr.puts str if @debug
   end
+  
+   def info_for_name(name, country_id)
+    name_lc = name.to_s.strip.downcase
+    country_id_lc = country_id.name.to_s.strip.downcase
+
+    #not using this cache database
+    # If a database-cache is enabled, try to look result up there first.
+    #if @cache_db
+    #  cache_db_res = @cache_db.single(:genderize_io_rb_cache, name: name_lc)
+    #  if cache_db_res
+    #    res = ::GenderizeIoRb::Result.new(
+    #      data: JSON.parse(cache_db_res[:result]),
+    #      genderize_io_rb: self,
+    #      from_cache_db: true
+    #    )
+    #  end
+    #end
+
+   # if @cache_as
+   #   cache_as_res = @cache_as.read(cache_key_for_name(name_lc))
+   #
+   #   if cache_as_res
+   #    res = ::GenderizeIoRb::Result.new(
+   #       data: JSON.parse(cache_as_res),
+   #      genderize_io_rb: self,
+   #       from_cache_as: true
+   #     )
+   #   end
+   # end
+
+   # unless res
+      http_res = @http.get("?name=#{CGI.escape(name_lc)}&country_id=#{CGI.escape(country_id_lc)}")
+      json_res = JSON.parse(http_res.body)
+
+      raise GenderizeIoRb::Errors::NameNotFound, "Name was not found on Genderize.io: '#{name_lc}'." unless json_res["gender"]
+
+      res = ::GenderizeIoRb::Result.new(
+        data: json_res,
+        genderize_io_rb: self,
+        from_http_request: true
+      )
+      store_cache_for_name(name_lc, json_res)
+    #end
+
+    return res
+  end
 end
